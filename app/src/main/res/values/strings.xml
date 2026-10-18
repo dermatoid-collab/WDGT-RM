@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WDGT-RM</string>
+    <string name="widget_moon">Luna</string>
+    <string name="widget_sun">Sole</string>
+    <string name="widget_countdown">Countdown Granfondo</string>
+</resources>
