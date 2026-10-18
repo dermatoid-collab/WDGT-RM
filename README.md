@@ -4,17 +4,19 @@ Suite di widget nativi (Kotlin + Jetpack Glance) per Samsung Galaxy / One UI. Co
 
 | Widget | Contenuto |
 |---|---|
+| Launcher (1×1) | Lancia un'app a scelta; ogni istanza ha app, nome e icona propri |
 | Luna | Fase, illuminazione, giorni alla luna piena |
 | Sole | Alba, tramonto, ore di luce, prossimo evento (Parma) |
 | Countdown | Giorni alla prossima Granfondo |
-| Shopping | Launcher a griglia per Wallet, Satispay, Eurospin, Lidl (icone reali delle app installate) |
+
+## Launcher
+1. Apri l'app **WDGT-RM**: definisci l'elenco delle app e riordinalo (▲ ▼ ✕).
+2. Aggiungi il widget *Launcher* alla Home: si aprono le impostazioni, dove scegli app, nome e icona (icona dell'app, emoji o immagine).
+3. Per modificarlo in seguito: tieni premuto sul widget → *Impostazioni*.
 
 ## Personalizzazione
-Modifica `app/src/main/java/it/wdgtrm/Config.kt` (località, nome e data evento).
+`app/src/main/java/it/wdgtrm/Config.kt` (località, nome e data evento per Sole e Countdown).
 
 ## Build
 - Locale: Android Studio → Run, oppure `gradle :app:assembleDebug`.
 - CI: ogni push genera l'APK come artifact di GitHub Actions (`wdgt-rm-debug-apk`).
-
-## Installazione
-Scarica l'APK sul telefono, installalo, poi Home → tieni premuto → Widget → WDGT-RM.
