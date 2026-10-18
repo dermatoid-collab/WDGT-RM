@@ -20,6 +20,7 @@ object Store {
 
     fun setApps(c: Context, list: List<String>) {
         prefs(c).edit().putString("apps", list.distinct().joinToString(",")).apply()
+        Shortcuts.publish(c)
     }
 
     fun config(c: Context, widgetId: Int): WidgetCfg? {

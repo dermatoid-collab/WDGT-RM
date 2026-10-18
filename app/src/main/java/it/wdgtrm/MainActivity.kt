@@ -23,7 +23,9 @@ class MainActivity : Activity() {
             text = "Definisci qui l'elenco delle app e il loro ordine. " +
                 "Poi aggiungi un widget «Launcher» alla Home: toccandolo si apre un menu con " +
                 "queste app e scegli ogni volta quale lanciare. Tenendolo premuto → Impostazioni " +
-                "scegli nome e icona, oppure una singola app fissa."
+                "scegli nome e icona, oppure una singola app fissa.\n\n" +
+                "Le prime app dell'elenco (fino al limite di Android, di solito 4-5) compaiono anche " +
+                "tenendo premuta l'icona di WDGT-RM."
         })
         root.addLabel("App nell'elenco")
         list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -34,6 +36,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        Shortcuts.publish(this)
         render()
     }
 

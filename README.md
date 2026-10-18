@@ -15,6 +15,9 @@ Suite di widget nativi (Kotlin + Jetpack Glance) per Samsung Galaxy / One UI. Co
 3. Un tocco sul widget apre il menu: scegli ogni volta quale app lanciare.
 4. Per modificarlo in seguito: tieni premuto sul widget → *Impostazioni* (il tocco prolungato è gestito dalla schermata Home di Android e non può aprire il menu).
 
+## Scorciatoie
+Le prime app dell'elenco (fino al limite di Android, di solito 4-5) compaiono come scorciatoie tenendo premuta l'icona dell'app WDGT-RM.
+
 ## Personalizzazione
 `app/src/main/java/it/wdgtrm/Config.kt` (località, nome e data evento per Sole e Countdown).
 
