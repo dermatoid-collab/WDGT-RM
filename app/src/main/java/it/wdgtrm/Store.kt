@@ -9,8 +9,19 @@ object Store {
     const val ICON_APP = 0
     const val ICON_EMOJI = 1
     const val ICON_IMAGE = 2
+    const val ICON_SET = 3
 
-    data class WidgetCfg(val pkg: String, val name: String, val iconMode: Int, val emoji: String)
+    const val TONE_WHITE = 0
+    const val TONE_BLACK = 1
+
+    data class WidgetCfg(
+        val pkg: String,
+        val name: String,
+        val iconMode: Int,
+        val emoji: String,
+        val symbol: String = Symbols.DEFAULT,
+        val tone: Int = TONE_WHITE,
+    )
 
     private fun prefs(c: Context) = c.getSharedPreferences("wdgt", Context.MODE_PRIVATE)
 
@@ -31,6 +42,8 @@ object Store {
             name = p.getString("w${widgetId}_name", "") ?: "",
             iconMode = p.getInt("w${widgetId}_mode", ICON_APP),
             emoji = p.getString("w${widgetId}_emoji", "") ?: "",
+            symbol = p.getString("w${widgetId}_symbol", Symbols.DEFAULT) ?: Symbols.DEFAULT,
+            tone = p.getInt("w${widgetId}_tone", TONE_WHITE),
         )
     }
 
@@ -40,6 +53,8 @@ object Store {
             .putString("w${widgetId}_name", cfg.name)
             .putInt("w${widgetId}_mode", cfg.iconMode)
             .putString("w${widgetId}_emoji", cfg.emoji)
+            .putString("w${widgetId}_symbol", cfg.symbol)
+            .putInt("w${widgetId}_tone", cfg.tone)
             .apply()
     }
 
@@ -47,6 +62,7 @@ object Store {
         prefs(c).edit()
             .remove("w${widgetId}_pkg").remove("w${widgetId}_name")
             .remove("w${widgetId}_mode").remove("w${widgetId}_emoji")
+            .remove("w${widgetId}_symbol").remove("w${widgetId}_tone")
             .apply()
         imageFile(c, widgetId).delete()
     }
