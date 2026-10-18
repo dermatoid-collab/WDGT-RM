@@ -29,26 +29,32 @@ import androidx.glance.layout.size
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import it.wdgtrm.MenuActivity
 import it.wdgtrm.Store
 
-/** Launcher 1x1: un tocco apre l'app scelta; pressione prolungata → impostazioni. */
+/** Launcher 1x1: un tocco apre il menu delle app (o l'app fissa scelta); pressione prolungata → impostazioni. */
 class LauncherWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val widgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         val cfg = Store.config(context, widgetId)
         val pm = context.packageManager
 
+        // pkg vuoto = modalità menu: il tocco apre l'elenco e si sceglie ogni volta
         val launch = cfg?.let {
-            pm.getLaunchIntentForPackage(it.pkg)
-                ?: Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${it.pkg}"))
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (it.pkg.isEmpty()) {
+                Intent(context, MenuActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            } else {
+                pm.getLaunchIntentForPackage(it.pkg)
+                    ?: Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${it.pkg}"))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
         }
         val iconBitmap: Bitmap? = when (cfg?.iconMode) {
             Store.ICON_IMAGE -> BitmapFactory.decodeFile(Store.imageFile(context, widgetId).path)
             Store.ICON_EMOJI -> null
             else -> try { pm.getApplicationIcon(cfg?.pkg ?: "").toBitmap(128, 128) } catch (e: Exception) { null }
         }
-        val emoji = cfg?.emoji?.takeIf { cfg.iconMode == Store.ICON_EMOJI && it.isNotEmpty() } ?: "🛒"
+        val emoji = cfg?.emoji?.takeIf { cfg.iconMode == Store.ICON_EMOJI && it.isNotEmpty() } ?: "🚀"
 
         provideContent {
             GlanceTheme {

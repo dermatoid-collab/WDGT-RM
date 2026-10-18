@@ -21,8 +21,9 @@ class MainActivity : Activity() {
         root.addTitle("WDGT-RM · Launcher")
         root.addView(TextView(this).apply {
             text = "Definisci qui l'elenco delle app e il loro ordine. " +
-                "Poi aggiungi un widget «Launcher» alla Home: tenendolo premuto → Impostazioni " +
-                "scegli app, nome e icona."
+                "Poi aggiungi un widget «Launcher» alla Home: toccandolo si apre un menu con " +
+                "queste app e scegli ogni volta quale lanciare. Tenendolo premuto → Impostazioni " +
+                "scegli nome e icona, oppure una singola app fissa."
         })
         root.addLabel("App nell'elenco")
         list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }

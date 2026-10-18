@@ -26,7 +26,9 @@ import kotlinx.coroutines.launch
 /** Impostazioni di un singolo widget: app, nome, icona. Si apre alla creazione e con pressione prolungata. */
 class WidgetConfigActivity : Activity() {
     private var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID
+    /** pkgs[0] = "" è la modalità menu; poi i pacchetti dell'elenco. */
     private var pkgs: List<String> = emptyList()
+    private var selectedPkg = ""
     private var autoName = ""
     private var pendingImage: Bitmap? = null
 
@@ -50,15 +52,16 @@ class WidgetConfigActivity : Activity() {
             return
         }
         val existing = Store.config(this, widgetId)
+        selectedPkg = existing?.pkg ?: ""
 
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         root.padForSystemBars(root.dp(20))
         root.addTitle("Impostazioni widget")
 
-        root.addLabel("App da lanciare")
+        root.addLabel("Cosa lancia il widget")
         spinner = Spinner(this)
         root.addView(spinner)
-        emptyHint = TextView(this).apply { text = "L'elenco è vuoto: aggiungi prima delle app." }
+        emptyHint = TextView(this).apply { text = "L'elenco app è vuoto: il menu resterà vuoto finché non ne aggiungi." }
         root.addView(emptyHint)
         root.addButton("Gestisci elenco app") { startActivity(Intent(this, MainActivity::class.java)) }
 
@@ -71,7 +74,7 @@ class WidgetConfigActivity : Activity() {
 
         root.addLabel("Icona")
         iconGroup = RadioGroup(this).apply {
-            addView(RadioButton(context).apply { id = idApp; text = "Icona dell'app" })
+            addView(RadioButton(context).apply { id = idApp; text = "Predefinita (icona dell'app, 🚀 per il menu)" })
             addView(RadioButton(context).apply { id = idEmoji; text = "Emoji" })
             addView(RadioButton(context).apply { id = idImage; text = "Immagine dalla galleria" })
         }
@@ -103,7 +106,9 @@ class WidgetConfigActivity : Activity() {
 
         spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
-                val label = Apps.label(this@WidgetConfigActivity, pkgs.getOrNull(pos) ?: return) ?: return
+                val pkg = pkgs.getOrNull(pos) ?: return
+                selectedPkg = pkg
+                val label = if (pkg.isEmpty()) "Launcher" else Apps.label(this@WidgetConfigActivity, pkg) ?: return
                 // Propone il nome dell'app finché l'utente non ne ha scritto uno proprio
                 val cur = nameField.text.toString()
                 if (cur.isBlank() || cur == autoName) nameField.setText(label)
@@ -116,12 +121,13 @@ class WidgetConfigActivity : Activity() {
     override fun onResume() {
         super.onResume()
         if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return
-        val selected = pkgs.getOrNull(spinner.selectedItemPosition) ?: Store.config(this, widgetId)?.pkg
-        pkgs = Store.apps(this)
-        val labels = pkgs.map { Apps.label(this, it) ?: "$it (non installata)" }
+        pkgs = listOf("") + Store.apps(this)
+        val labels = pkgs.map {
+            if (it.isEmpty()) "Menu: scegli ogni volta" else Apps.label(this, it) ?: "$it (non installata)"
+        }
         spinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, labels)
-        pkgs.indexOf(selected).takeIf { it >= 0 }?.let { spinner.setSelection(it) }
-        emptyHint.visibility = if (pkgs.isEmpty()) View.VISIBLE else View.GONE
+        pkgs.indexOf(selectedPkg).takeIf { it >= 0 }?.let { spinner.setSelection(it) }
+        emptyHint.visibility = if (pkgs.size == 1) View.VISIBLE else View.GONE
     }
 
     @Deprecated("Deprecated in Java")

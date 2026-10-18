@@ -24,6 +24,13 @@
         </activity>
 
         <activity
+            android:name=".MenuActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:theme="@style/MenuTheme" />
+
+        <activity
             android:name=".WidgetConfigActivity"
             android:exported="true">
             <intent-filter>
