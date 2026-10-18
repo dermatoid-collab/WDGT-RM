@@ -12,7 +12,7 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.CheckBox
 import android.widget.EditText
-import android.widget.HorizontalScrollView
+import android.widget.GridLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RadioButton
@@ -150,16 +150,22 @@ class WidgetConfigActivity : Activity() {
         }
     }
 
-    /** Riga scorrevole con le icone del set; quella scelta è evidenziata. */
+    /** Griglia con le icone del set; quella scelta è evidenziata. */
     private fun buildSymbolStrip(root: View): View {
-        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         val ta = obtainStyledAttributes(intArrayOf(android.R.attr.textColorPrimary))
         val tint = ta.getColor(0, 0xFF000000.toInt())
         ta.recycle()
+        val columns = 6
+        val cell = (resources.displayMetrics.widthPixels - 2 * root.dp(20)) / columns
+        val pad = cell / 5
+        val grid = GridLayout(this).apply { columnCount = columns }
         Symbols.all.forEach { (key, res) ->
             val iv = ImageView(this).apply {
-                layoutParams = LinearLayout.LayoutParams(root.dp(52), root.dp(52))
-                setPadding(root.dp(10), root.dp(10), root.dp(10), root.dp(10))
+                layoutParams = GridLayout.LayoutParams().apply {
+                    width = cell
+                    height = cell
+                }
+                setPadding(pad, pad, pad, pad)
                 setImageResource(res)
                 setColorFilter(tint)
                 contentDescription = key
@@ -170,10 +176,10 @@ class WidgetConfigActivity : Activity() {
                 }
             }
             symbolViews[key] = iv
-            row.addView(iv)
+            grid.addView(iv)
         }
         refreshSymbolStrip()
-        return HorizontalScrollView(this).apply { addView(row) }
+        return grid
     }
 
     private fun refreshSymbolStrip() {
