@@ -2,102 +2,107 @@ package it.wdgtrm
 
 import android.app.Activity
 import android.content.Intent
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
-import android.util.TypedValue
-import android.view.Gravity
+import android.view.View
+import android.view.WindowInsets
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.view.doOnLayout
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.sin
 
 /**
- * Menu circolare aperto dal tocco sul widget: solo icone disposte a cerchio attorno
- * al widget. Un tocco su un'icona lancia l'app; un tocco fuori chiude il menu.
+ * Menu tradizionale aperto dal tocco sul widget: colonna di sole icone, sfondo opaco,
+ * larghezza minima. Compare sopra il widget (sotto, se sopra non c'è spazio).
+ * Un tocco su un'icona lancia l'app; un tocco fuori chiude il menu.
  */
 class MenuActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val apps = Store.apps(this).mapNotNull { pkg -> Apps.label(this, pkg)?.let { pkg to it } }
         val root = FrameLayout(this)
-        root.setBackgroundColor(0x80000000.toInt())
         root.setOnClickListener { finish() }
         setContentView(root)
-        if (apps.isEmpty()) {
-            showEmpty(root)
-        } else {
-            root.doOnLayout { layoutRing(root, apps) }
-        }
-    }
 
-    private fun layoutRing(root: FrameLayout, apps: List<Pair<String, String>>) {
-        val pm = packageManager
-        val size = root.dp(60)
-        val n = apps.size
-        // Raggio minimo 88dp; cresce con il numero di app per non sovrapporle
-        val radius = maxOf(root.dp(88), (n * root.dp(68) / (2 * PI)).toInt())
-        val margin = radius + size / 2 + root.dp(8)
-
-        // Il launcher indica dove si trova il widget toccato; altrimenti centro schermo
-        val bounds = intent?.sourceBounds
-        val cx = clamp(bounds?.exactCenterX() ?: root.width / 2f, margin.toFloat(), (root.width - margin).toFloat())
-        val cy = clamp(bounds?.exactCenterY() ?: root.height / 2f, margin.toFloat(), (root.height - margin).toFloat())
-
-        val tv = TypedValue()
-        theme.resolveAttribute(android.R.attr.colorBackground, tv, true)
-        val pad = root.dp(10)
-
-        apps.forEachIndexed { i, (pkg, label) ->
-            val angle = -PI / 2 + 2 * PI * i / n // parte dall'alto, in senso orario
-            val tx = cx + (radius * cos(angle)).toFloat() - size / 2f
-            val ty = cy + (radius * sin(angle)).toFloat() - size / 2f
-            val icon = ImageView(this).apply {
-                layoutParams = FrameLayout.LayoutParams(size, size)
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(tv.data)
-                }
-                setPadding(pad, pad, pad, pad)
-                try { setImageDrawable(pm.getApplicationIcon(pkg)) } catch (e: Exception) { }
-                contentDescription = label
-                elevation = root.dp(6).toFloat()
-                setOnClickListener { launch(pkg) }
-                // Parte dal centro e si apre a raggiera
-                x = cx - size / 2f
-                y = cy - size / 2f
-                alpha = 0f
-                scaleX = 0.3f
-                scaleY = 0.3f
-            }
-            root.addView(icon)
-            icon.animate().x(tx).y(ty).alpha(1f).scaleX(1f).scaleY(1f)
-                .setStartDelay(i * 20L).setDuration(180).start()
-        }
-    }
-
-    private fun clamp(v: Float, lo: Float, hi: Float) = if (lo > hi) (lo + hi) / 2 else v.coerceIn(lo, hi)
-
-    private fun showEmpty(root: FrameLayout) {
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundResource(R.drawable.menu_bg)
-            setPadding(dp(20), dp(20), dp(20), dp(12))
-            isClickable = true // un tocco sulla scheda non chiude il menu
-            addView(TextView(context).apply { text = "Nessuna app nell'elenco." })
-            addButton("Apri impostazioni") {
+            isClickable = true // un tocco sul bordo della scheda non chiude il menu
+            elevation = root.dp(8).toFloat()
+        }
+        val items = mutableListOf<View>()
+        if (apps.isEmpty()) {
+            card.setPadding(root.dp(16), root.dp(16), root.dp(16), root.dp(8))
+            card.addView(TextView(this).apply { text = "Nessuna app nell'elenco." })
+            card.addButton("Apri impostazioni") {
                 startActivity(Intent(this@MenuActivity, MainActivity::class.java))
                 finish()
             }
+        } else {
+            card.setPadding(root.dp(4), root.dp(4), root.dp(4), root.dp(4))
+            apps.forEach { (pkg, label) ->
+                items += ImageView(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(root.dp(48), root.dp(48))
+                    setPadding(root.dp(6), root.dp(6), root.dp(6), root.dp(6))
+                    try { setImageDrawable(packageManager.getApplicationIcon(pkg)) } catch (e: Exception) { }
+                    contentDescription = label
+                    setOnClickListener { launch(pkg) }
+                }
+            }
+            items.forEach { card.addView(it) }
         }
         root.addView(card, FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER,
+            FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT,
         ))
+        root.doOnLayout { place(root, card, items) }
     }
+
+    private fun place(root: FrameLayout, card: LinearLayout, items: List<View>) {
+        card.measure(
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+        )
+        val w = card.measuredWidth
+        val h = card.measuredHeight
+        val gap = root.dp(8).toFloat()
+        val edge = root.dp(8).toFloat()
+        val bars = root.rootWindowInsets?.getInsets(WindowInsets.Type.systemBars())
+        val minY = (bars?.top ?: 0) + edge
+        val maxY = root.height - (bars?.bottom ?: 0) - h - edge
+
+        // Il launcher indica dove si trova il widget toccato; altrimenti centro schermo
+        val b = intent?.sourceBounds
+        val x = clamp((b?.exactCenterX() ?: (root.width / 2f)) - w / 2f, edge, root.width - w - edge)
+        var above = false
+        val y = if (b != null) {
+            val aboveY = b.top - h - gap
+            if (aboveY >= minY) {
+                above = true
+                aboveY
+            } else {
+                clamp(b.bottom + gap, minY, maxY)
+            }
+        } else {
+            clamp((root.height - h) / 2f, minY, maxY)
+        }
+
+        // Sopra il widget la prima app sta in basso, vicino al pollice
+        if (above && items.isNotEmpty()) {
+            card.removeAllViews()
+            items.asReversed().forEach { card.addView(it) }
+        }
+        card.x = x
+        card.y = y
+        card.pivotX = w / 2f
+        card.pivotY = if (above) h.toFloat() else 0f
+        card.alpha = 0f
+        card.scaleX = 0.85f
+        card.scaleY = 0.85f
+        card.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(120).start()
+    }
+
+    private fun clamp(v: Float, lo: Float, hi: Float) = if (lo > hi) (lo + hi) / 2 else v.coerceIn(lo, hi)
 
     private fun launch(pkg: String) {
         val intent = packageManager.getLaunchIntentForPackage(pkg)

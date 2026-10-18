@@ -12,7 +12,7 @@ Suite di widget nativi (Kotlin + Jetpack Glance) per Samsung Galaxy / One UI. Co
 ## Launcher
 1. Apri l'app **WDGT-RM**: definisci l'elenco delle app e riordinalo (▲ ▼ ✕).
 2. Aggiungi il widget *Launcher* alla Home (sfondo trasparente, stile minimal bianco/nero): si aprono le impostazioni, dove scegli nome, icona (set di 14 simboli minimal, icona dell'app, emoji o immagine), colore bianco/nero e se il widget apre il **menu** o una **app fissa**.
-3. Un tocco sul widget apre il menu circolare (solo icone, disposte attorno al widget): tocca un'icona per lanciare l'app, tocca fuori per chiudere.
+3. Un tocco sul widget apre il menu: colonna di sole icone su sfondo opaco, la più stretta possibile, sopra il widget (sotto se non c'è spazio). Tocca un'icona per lanciare l'app, tocca fuori per chiudere.
 4. Per modificarlo in seguito: tieni premuto sul widget → *Impostazioni* (il tocco prolungato è gestito dalla schermata Home di Android e non può aprire il menu).
 
 ## Scorciatoie
