@@ -62,7 +62,7 @@ class LauncherWidget : GlanceAppWidget() {
         }
         val iconBitmap: Bitmap? = when (cfg?.iconMode) {
             Store.ICON_IMAGE -> BitmapFactory.decodeFile(Store.imageFile(context, widgetId).path)
-            Store.ICON_APP -> try { pm.getApplicationIcon(cfg?.pkg.orEmpty()).toBitmap(128, 128) } catch (e: Exception) { null }
+            Store.ICON_APP -> try { pm.getApplicationIcon(cfg?.pkg.orEmpty()).toBitmap(192, 192) } catch (e: Exception) { null }
             else -> null
         }
         val emoji = cfg?.emoji?.takeIf { cfg.iconMode == Store.ICON_EMOJI && it.isNotEmpty() } ?: "▦"
@@ -82,21 +82,21 @@ class LauncherWidget : GlanceAppWidget() {
                         symbolRes != null -> Image(
                             provider = ImageProvider(symbolRes),
                             contentDescription = cfg.name,
-                            modifier = GlanceModifier.size(36.dp),
+                            modifier = GlanceModifier.size(60.dp),
                             colorFilter = ColorFilter.tint(tone),
                         )
                         iconBitmap != null -> Image(
                             provider = ImageProvider(iconBitmap),
                             contentDescription = cfg.name,
-                            modifier = GlanceModifier.size(40.dp),
+                            modifier = GlanceModifier.size(56.dp),
                         )
-                        else -> Text(emoji, style = TextStyle(fontSize = 30.sp, color = tone))
+                        else -> Text(emoji, style = TextStyle(fontSize = 46.sp, color = tone))
                     }
                     if (cfg.name.isNotEmpty()) {
                         Text(
                             cfg.name,
                             maxLines = 1,
-                            style = TextStyle(color = tone, fontSize = 11.sp, fontWeight = FontWeight.Medium),
+                            style = TextStyle(color = tone, fontSize = 12.sp, fontWeight = FontWeight.Medium),
                         )
                     }
                 }
