@@ -31,6 +31,12 @@
             android:theme="@style/MenuTheme" />
 
         <activity
+            android:name=".PositionActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@style/MenuTheme" />
+
+        <activity
             android:name=".WidgetConfigActivity"
             android:exported="true">
             <intent-filter>

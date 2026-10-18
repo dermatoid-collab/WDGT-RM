@@ -10,6 +10,7 @@ import android.text.InputType
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.HorizontalScrollView
 import android.widget.ImageView
@@ -43,6 +44,7 @@ class WidgetConfigActivity : Activity() {
     private lateinit var imageStatus: TextView
     private lateinit var iconGroup: RadioGroup
     private lateinit var toneGroup: RadioGroup
+    private lateinit var positionCheck: CheckBox
     private val symbolViews = mutableMapOf<String, ImageView>()
 
     private val idSet = View.generateViewId()
@@ -121,6 +123,14 @@ class WidgetConfigActivity : Activity() {
         }
         root.addView(toneGroup)
         toneGroup.check(if (existing?.tone == Store.TONE_BLACK) idBlack else idWhite)
+
+        root.addLabel("Posizione del menu")
+        positionCheck = CheckBox(this).apply {
+            text = "Dopo il salvataggio, tocca il widget in Home per posizionare il menu sopra di esso"
+            // Utile al primo uso e se il widget è stato spostato
+            isChecked = Store.position(this@WidgetConfigActivity, widgetId) == null
+        }
+        root.addView(positionCheck)
 
         root.addButton("Salva") { save() }
         root.addButton("Annulla") { finish() }
@@ -225,6 +235,13 @@ class WidgetConfigActivity : Activity() {
                 LauncherWidget().update(this@WidgetConfigActivity, glanceId)
             } catch (e: Exception) {
                 // il widget viene comunque aggiornato dal sistema dopo l'aggiunta
+            }
+            if (positionCheck.isChecked && pkg.isEmpty()) {
+                // Schermata trasparente sopra la Home: si tocca il centro del widget
+                startActivity(
+                    Intent(this@WidgetConfigActivity, PositionActivity::class.java)
+                        .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId),
+                )
             }
             finish()
         }

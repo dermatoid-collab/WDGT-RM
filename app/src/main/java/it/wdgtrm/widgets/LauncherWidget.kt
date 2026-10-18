@@ -43,7 +43,11 @@ class LauncherWidget : GlanceAppWidget() {
         // pkg vuoto = modalità menu: il tocco apre l'elenco e si sceglie ogni volta
         val launch = cfg?.let {
             if (it.pkg.isEmpty()) {
-                Intent(context, MenuActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                // data distingue i PendingIntent delle varie istanze (gli extra non bastano)
+                Intent(context, MenuActivity::class.java)
+                    .setData(Uri.parse("wdgt://menu/$widgetId"))
+                    .putExtra(MenuActivity.EXTRA_WIDGET_ID, widgetId)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             } else {
                 pm.getLaunchIntentForPackage(it.pkg)
                     ?: Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${it.pkg}"))

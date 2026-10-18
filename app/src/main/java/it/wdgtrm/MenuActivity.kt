@@ -1,7 +1,9 @@
 package it.wdgtrm
 
 import android.app.Activity
+import android.appwidget.AppWidgetManager
 import android.content.Intent
+import android.graphics.RectF
 import android.os.Bundle
 import android.view.View
 import android.view.WindowInsets
@@ -71,9 +73,8 @@ class MenuActivity : Activity() {
         val minY = (bars?.top ?: 0) + edge
         val maxY = root.height - (bars?.bottom ?: 0) - h - edge
 
-        // Il launcher indica dove si trova il widget toccato; altrimenti centro schermo
-        val b = intent?.sourceBounds
-        val x = clamp((b?.exactCenterX() ?: (root.width / 2f)) - w / 2f, edge, root.width - w - edge)
+        val b = widgetBounds(root)
+        val x = clamp((b?.centerX() ?: (root.width / 2f)) - w / 2f, edge, root.width - w - edge)
         var above = false
         val y = if (b != null) {
             val aboveY = b.top - h - gap
@@ -102,6 +103,24 @@ class MenuActivity : Activity() {
         card.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(120).start()
     }
 
+    /**
+     * Dove si trova il widget: prima il dato del launcher (se lo fornisce), poi il punto
+     * indicato dall'utente nelle impostazioni. Senza nessuno dei due: centro schermo.
+     */
+    private fun widgetBounds(root: View): RectF? {
+        intent?.sourceBounds?.let { return RectF(it) }
+        val widgetId = intent?.getIntExtra(EXTRA_WIDGET_ID, -1) ?: -1
+        val (px, py) = Store.position(this, widgetId) ?: return null
+        val heightDp = try {
+            AppWidgetManager.getInstance(this).getAppWidgetOptions(widgetId)
+                .getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
+        } catch (e: Exception) {
+            0
+        }.takeIf { it > 0 } ?: 72
+        val half = root.dp(heightDp) / 2f
+        return RectF(px - half, py - half, px + half, py + half)
+    }
+
     private fun clamp(v: Float, lo: Float, hi: Float) = if (lo > hi) (lo + hi) / 2 else v.coerceIn(lo, hi)
 
     private fun launch(pkg: String) {
@@ -112,5 +131,9 @@ class MenuActivity : Activity() {
             startActivity(intent)
         }
         finish()
+    }
+
+    companion object {
+        const val EXTRA_WIDGET_ID = "widgetId"
     }
 }

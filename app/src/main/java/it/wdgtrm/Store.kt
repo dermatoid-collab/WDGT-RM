@@ -58,11 +58,23 @@ object Store {
             .apply()
     }
 
+    /** Centro del widget sullo schermo, indicato dall'utente (One UI non lo comunica). */
+    fun position(c: Context, widgetId: Int): Pair<Float, Float>? {
+        val p = prefs(c)
+        if (!p.contains("w${widgetId}_px")) return null
+        return p.getFloat("w${widgetId}_px", 0f) to p.getFloat("w${widgetId}_py", 0f)
+    }
+
+    fun savePosition(c: Context, widgetId: Int, x: Float, y: Float) {
+        prefs(c).edit().putFloat("w${widgetId}_px", x).putFloat("w${widgetId}_py", y).apply()
+    }
+
     fun delete(c: Context, widgetId: Int) {
         prefs(c).edit()
             .remove("w${widgetId}_pkg").remove("w${widgetId}_name")
             .remove("w${widgetId}_mode").remove("w${widgetId}_emoji")
             .remove("w${widgetId}_symbol").remove("w${widgetId}_tone")
+            .remove("w${widgetId}_px").remove("w${widgetId}_py")
             .apply()
         imageFile(c, widgetId).delete()
     }
