@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Finestra flottante che si adatta al tema chiaro/scuro di sistema -->
+    <!-- Schermo intero trasparente: il menu circolare si disegna sopra la Home -->
     <style name="MenuTheme" parent="@android:style/Theme.DeviceDefault.DayNight">
-        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowNoTitle">true</item>
-        <item name="android:windowBackground">@drawable/menu_bg</item>
-        <item name="android:windowCloseOnTouchOutside">true</item>
+        <item name="android:windowAnimationStyle">@android:style/Animation.Translucent</item>
     </style>
 </resources>
