@@ -3,8 +3,10 @@ package it.wdgtrm
 import android.app.Activity
 import android.appwidget.AppWidgetManager
 import android.content.Intent
+import android.graphics.drawable.GradientDrawable
 import android.graphics.RectF
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.View
 import android.view.WindowInsets
 import android.widget.FrameLayout
@@ -12,6 +14,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.doOnLayout
 
 /**
@@ -23,15 +26,18 @@ class MenuActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val apps = Store.apps(this).mapNotNull { pkg -> Apps.label(this, pkg)?.let { pkg to it } }
+        val widgetId = intent?.getIntExtra(EXTRA_WIDGET_ID, -1) ?: -1
+        val cfg = Store.config(this, widgetId)
         val root = FrameLayout(this)
         root.setOnClickListener { finish() }
         setContentView(root)
 
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundResource(R.drawable.menu_bg)
+            background = menuBackground(cfg)
             isClickable = true // un tocco sul bordo della scheda non chiude il menu
-            elevation = root.dp(8).toFloat()
+            // L'ombra con uno sfondo semitrasparente sporcherebbe il colore
+            elevation = if ((cfg?.menuAlpha ?: 100) >= 100) root.dp(8).toFloat() else 0f
         }
         val items = mutableListOf<View>()
         if (apps.isEmpty()) {
@@ -119,6 +125,18 @@ class MenuActivity : Activity() {
         }.takeIf { it > 0 } ?: 72
         val half = root.dp(heightDp) / 2f
         return RectF(px - half, py - half, px + half, py + half)
+    }
+
+    /** Sfondo del menu: colore scelto (o del tema) con l'opacità scelta. */
+    private fun menuBackground(cfg: Store.WidgetCfg?): GradientDrawable {
+        val tv = TypedValue()
+        theme.resolveAttribute(android.R.attr.colorBackground, tv, true)
+        val base = if (cfg == null || cfg.menuColor == 0) tv.data else cfg.menuColor
+        val alpha = (cfg?.menuAlpha ?: 100) * 255 / 100
+        return GradientDrawable().apply {
+            setColor(ColorUtils.setAlphaComponent(base, alpha))
+            cornerRadius = resources.displayMetrics.density * 16
+        }
     }
 
     private fun clamp(v: Float, lo: Float, hi: Float) = if (lo > hi) (lo + hi) / 2 else v.coerceIn(lo, hi)

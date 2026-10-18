@@ -14,13 +14,14 @@ import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
+import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.provideContent
-import androidx.glance.action.clickable
 import androidx.glance.layout.Alignment
+import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.padding
@@ -29,11 +30,15 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import it.wdgtrm.BgShapes
 import it.wdgtrm.MenuActivity
 import it.wdgtrm.Store
 import it.wdgtrm.Symbols
 
-/** Launcher 1x1 minimal, sfondo trasparente: il tocco apre il menu circolare (o l'app fissa). */
+/**
+ * Launcher 1x1: tessera a forma di icona (opzionale) con simbolo, nome sotto.
+ * Il tocco apre il menu delle app (o l'app fissa); pressione prolungata → impostazioni.
+ */
 class LauncherWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val widgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
@@ -66,7 +71,15 @@ class LauncherWidget : GlanceAppWidget() {
             else -> null
         }
         val emoji = cfg?.emoji?.takeIf { cfg.iconMode == Store.ICON_EMOJI && it.isNotEmpty() } ?: "▦"
-        val tone = ColorProvider(if (cfg?.tone == Store.TONE_BLACK) Color.Black else Color.White)
+
+        val iconColor = ColorProvider(Color(cfg?.iconColor ?: 0xFFFFFFFF.toInt()))
+        val shapeRes = cfg?.let { BgShapes.res(it.bgShape) }
+        // Colore dello sfondo con l'opacità scelta (il tint rispetta il canale alpha)
+        val bgTint = cfg?.let { ColorProvider(Color(it.bgColor).copy(alpha = it.bgAlpha / 100f)) }
+        val tile = (cfg?.iconSize ?: 60).dp
+        // Con la tessera il simbolo sta dentro, come nelle icone One UI
+        val glyphDp = (cfg?.iconSize ?: 60) * if (shapeRes != null) 0.6f else 1f
+        val glyph = glyphDp.dp
 
         provideContent {
             val base = GlanceModifier.fillMaxSize().padding(4.dp)
@@ -76,27 +89,37 @@ class LauncherWidget : GlanceAppWidget() {
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 if (cfg == null) {
-                    Text("Tieni premuto → Impostazioni", style = TextStyle(color = tone, fontSize = 10.sp))
+                    Text("Tieni premuto → Impostazioni", style = TextStyle(color = iconColor, fontSize = 10.sp))
                 } else {
-                    when {
-                        symbolRes != null -> Image(
-                            provider = ImageProvider(symbolRes),
-                            contentDescription = cfg.name,
-                            modifier = GlanceModifier.size(60.dp),
-                            colorFilter = ColorFilter.tint(tone),
-                        )
-                        iconBitmap != null -> Image(
-                            provider = ImageProvider(iconBitmap),
-                            contentDescription = cfg.name,
-                            modifier = GlanceModifier.size(56.dp),
-                        )
-                        else -> Text(emoji, style = TextStyle(fontSize = 46.sp, color = tone))
+                    Box(modifier = GlanceModifier.size(tile), contentAlignment = Alignment.Center) {
+                        if (shapeRes != null && bgTint != null) {
+                            Image(
+                                provider = ImageProvider(shapeRes),
+                                contentDescription = null,
+                                modifier = GlanceModifier.fillMaxSize(),
+                                colorFilter = ColorFilter.tint(bgTint),
+                            )
+                        }
+                        when {
+                            symbolRes != null -> Image(
+                                provider = ImageProvider(symbolRes),
+                                contentDescription = cfg.name,
+                                modifier = GlanceModifier.size(glyph),
+                                colorFilter = ColorFilter.tint(iconColor),
+                            )
+                            iconBitmap != null -> Image(
+                                provider = ImageProvider(iconBitmap),
+                                contentDescription = cfg.name,
+                                modifier = GlanceModifier.size(glyph),
+                            )
+                            else -> Text(emoji, style = TextStyle(fontSize = (glyphDp * 0.8f).sp, color = iconColor))
+                        }
                     }
                     if (cfg.name.isNotEmpty()) {
                         Text(
                             cfg.name,
                             maxLines = 1,
-                            style = TextStyle(color = tone, fontSize = 12.sp, fontWeight = FontWeight.Medium),
+                            style = TextStyle(color = iconColor, fontSize = 12.sp, fontWeight = FontWeight.Medium),
                         )
                     }
                 }

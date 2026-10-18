@@ -5,28 +5,39 @@ import android.appwidget.AppWidgetManager
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.text.InputType
+import android.util.TypedValue
+import android.view.Gravity
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.GridLayout
+import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.ScrollView
+import android.widget.SeekBar
 import android.widget.Spinner
 import android.widget.TextView
+import androidx.core.graphics.ColorUtils
+import androidx.core.widget.doAfterTextChanged
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import it.wdgtrm.widgets.LauncherWidget
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-/** Impostazioni di un singolo widget: cosa lancia, nome, icona, colore. Si apre alla creazione e con pressione prolungata. */
+/**
+ * Impostazioni di un singolo widget: cosa lancia, nome, icona, sfondo, menu.
+ * Si apre alla creazione e con pressione prolungata.
+ */
 class WidgetConfigActivity : Activity() {
     private var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID
 
@@ -36,6 +47,15 @@ class WidgetConfigActivity : Activity() {
     private var autoName = ""
     private var symbol = Symbols.DEFAULT
     private var pendingImage: Bitmap? = null
+    private var savedImage: Bitmap? = null
+
+    private var iconColor = 0xFFFFFFFF.toInt()
+    private var iconSize = 60
+    private var bgShape = BgShapes.NONE
+    private var bgColor = 0xFF000000.toInt()
+    private var bgAlpha = 70
+    private var menuColor = 0
+    private var menuAlpha = 100
 
     private lateinit var spinner: Spinner
     private lateinit var emptyHint: TextView
@@ -43,16 +63,24 @@ class WidgetConfigActivity : Activity() {
     private lateinit var emojiField: EditText
     private lateinit var imageStatus: TextView
     private lateinit var iconGroup: RadioGroup
-    private lateinit var toneGroup: RadioGroup
     private lateinit var positionCheck: CheckBox
     private val symbolViews = mutableMapOf<String, ImageView>()
+
+    private lateinit var previewTile: FrameLayout
+    private lateinit var previewBg: ImageView
+    private lateinit var previewIcon: ImageView
+    private lateinit var previewEmoji: TextView
+    private lateinit var previewName: TextView
 
     private val idSet = View.generateViewId()
     private val idApp = View.generateViewId()
     private val idEmoji = View.generateViewId()
     private val idImage = View.generateViewId()
-    private val idWhite = View.generateViewId()
-    private val idBlack = View.generateViewId()
+
+    private val palette = listOf(
+        0xFFFFFFFFL, 0xFF000000L, 0xFF303030L, 0xFFBDBDBDL, 0xFFE53935L,
+        0xFFFB8C00L, 0xFFFDD835L, 0xFF43A047L, 0xFF1E88E5L, 0xFF8E24AAL,
+    ).map { it.toInt() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,11 +92,23 @@ class WidgetConfigActivity : Activity() {
         }
         val existing = Store.config(this, widgetId)
         selectedPkg = existing?.pkg ?: ""
-        symbol = existing?.symbol ?: Symbols.DEFAULT
+        existing?.let {
+            symbol = it.symbol
+            iconColor = it.iconColor
+            iconSize = it.iconSize
+            bgShape = it.bgShape
+            bgColor = it.bgColor
+            bgAlpha = it.bgAlpha
+            menuColor = it.menuColor
+            menuAlpha = it.menuAlpha
+        }
+        val imgFile = Store.imageFile(this, widgetId)
+        if (imgFile.exists()) savedImage = BitmapFactory.decodeFile(imgFile.path)
 
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         root.padForSystemBars(root.dp(20))
         root.addTitle("Impostazioni widget")
+        root.addView(buildPreview(root))
 
         root.addLabel("Cosa lancia il widget")
         spinner = Spinner(this)
@@ -84,6 +124,7 @@ class WidgetConfigActivity : Activity() {
         }
         root.addView(nameField)
 
+        // --- Icona ---
         root.addLabel("Icona")
         iconGroup = RadioGroup(this).apply {
             addView(RadioButton(context).apply { id = idSet; text = "Set di icone" })
@@ -92,16 +133,14 @@ class WidgetConfigActivity : Activity() {
             addView(RadioButton(context).apply { id = idImage; text = "Immagine dalla galleria" })
         }
         root.addView(iconGroup)
-        root.addView(buildSymbolStrip(root))
+        root.addView(buildSymbolGrid(root))
         emojiField = EditText(this).apply {
             hint = "Emoji, es. 🚴"
             inputType = InputType.TYPE_CLASS_TEXT
             setText(existing?.emoji.orEmpty())
         }
         root.addView(emojiField)
-        imageStatus = TextView(this).apply {
-            text = if (Store.imageFile(this@WidgetConfigActivity, widgetId).exists()) "Immagine impostata" else "Nessuna immagine"
-        }
+        imageStatus = TextView(this).apply { text = if (savedImage != null) "Immagine impostata" else "Nessuna immagine" }
         root.addView(imageStatus)
         root.addButton("Scegli immagine…") {
             startActivityForResult(Intent(Intent.ACTION_GET_CONTENT).setType("image/*"), REQ_IMAGE)
@@ -115,14 +154,34 @@ class WidgetConfigActivity : Activity() {
             },
         )
 
-        root.addLabel("Colore di icone del set e nome (sfondo trasparente)")
-        toneGroup = RadioGroup(this).apply {
-            orientation = RadioGroup.HORIZONTAL
-            addView(RadioButton(context).apply { id = idWhite; text = "Bianco" })
-            addView(RadioButton(context).apply { id = idBlack; text = "Nero" })
+        root.addLabel("Colore di icona del set, emoji e nome")
+        root.addView(swatchRow(root, palette, false, { iconColor }) { iconColor = it; refreshPreview() })
+        root.addView(seekRow(root, "Dimensione icona", 32, 88, iconSize, " dp") { iconSize = it; refreshPreview() })
+
+        // --- Sfondo del widget ---
+        root.addLabel("Sfondo del widget (forma dell'icona)")
+        val shapeSpinner = Spinner(this).apply {
+            adapter = ArrayAdapter(
+                this@WidgetConfigActivity, android.R.layout.simple_spinner_dropdown_item,
+                BgShapes.all.map { it.second },
+            )
+            setSelection(BgShapes.all.indexOfFirst { it.first == bgShape }.coerceAtLeast(0))
+            onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
+                    bgShape = BgShapes.all[pos].first
+                    refreshPreview()
+                }
+                override fun onNothingSelected(p: AdapterView<*>?) {}
+            }
         }
-        root.addView(toneGroup)
-        toneGroup.check(if (existing?.tone == Store.TONE_BLACK) idBlack else idWhite)
+        root.addView(shapeSpinner)
+        root.addView(swatchRow(root, palette, false, { bgColor }) { bgColor = it; refreshPreview() })
+        root.addView(seekRow(root, "Opacità sfondo", 0, 100, bgAlpha, "%") { bgAlpha = it; refreshPreview() })
+
+        // --- Menu ---
+        root.addLabel("Sfondo del menu (si apre al tocco sul widget)")
+        root.addView(swatchRow(root, palette, true, { menuColor }) { menuColor = it })
+        root.addView(seekRow(root, "Opacità menu", 10, 100, menuAlpha, "%") { menuAlpha = it })
 
         root.addLabel("Posizione del menu")
         positionCheck = CheckBox(this).apply {
@@ -145,13 +204,100 @@ class WidgetConfigActivity : Activity() {
                 val cur = nameField.text.toString()
                 if (cur.isBlank() || cur == autoName) nameField.setText(label)
                 autoName = label
+                refreshPreview()
             }
             override fun onNothingSelected(p: AdapterView<*>?) {}
         }
+        iconGroup.setOnCheckedChangeListener { _, _ -> refreshPreview() }
+        nameField.doAfterTextChanged { refreshPreview() }
+        emojiField.doAfterTextChanged { refreshPreview() }
+        refreshPreview()
     }
 
+    // ---------- Anteprima ----------
+
+    /** Riquadro grigio (per far vedere la trasparenza) con il widget com'è adesso. */
+    private fun buildPreview(root: View): View {
+        previewBg = ImageView(this)
+        previewIcon = ImageView(this).apply { scaleType = ImageView.ScaleType.FIT_CENTER }
+        previewEmoji = TextView(this).apply { gravity = Gravity.CENTER }
+        previewTile = FrameLayout(this).apply {
+            addView(previewBg, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+            addView(previewIcon, FrameLayout.LayoutParams(root.dp(40), root.dp(40), Gravity.CENTER))
+            addView(previewEmoji, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        }
+        previewName = TextView(this).apply {
+            textSize = 12f
+            gravity = Gravity.CENTER
+        }
+        val column = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(root.dp(12), root.dp(12), root.dp(12), root.dp(12))
+            addView(previewTile, LinearLayout.LayoutParams(root.dp(60), root.dp(60)))
+            addView(previewName, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        }
+        return FrameLayout(this).apply {
+            setBackgroundColor(0xFF7A7A7A.toInt())
+            addView(column, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        }
+    }
+
+    private fun refreshPreview() {
+        val tilePx = previewTile.dp(iconSize)
+        previewTile.layoutParams = LinearLayout.LayoutParams(tilePx, tilePx)
+        val shape = BgShapes.res(bgShape)
+        if (shape != null) {
+            previewBg.visibility = View.VISIBLE
+            previewBg.setImageResource(shape)
+            previewBg.setColorFilter(ColorUtils.setAlphaComponent(bgColor, bgAlpha * 255 / 100))
+        } else {
+            previewBg.visibility = View.GONE
+        }
+        // Con la tessera il simbolo sta dentro, come nelle icone One UI
+        val glyphPx = if (shape != null) (tilePx * 0.6f).toInt() else tilePx
+        previewIcon.layoutParams = FrameLayout.LayoutParams(glyphPx, glyphPx, Gravity.CENTER)
+        previewIcon.clearColorFilter()
+        previewIcon.visibility = View.VISIBLE
+        previewEmoji.visibility = View.GONE
+
+        fun showSymbol() {
+            previewIcon.setImageResource(Symbols.res(symbol))
+            previewIcon.setColorFilter(iconColor)
+        }
+        when (iconGroup.checkedRadioButtonId) {
+            idEmoji -> {
+                previewIcon.visibility = View.GONE
+                previewEmoji.visibility = View.VISIBLE
+                previewEmoji.text = emojiField.text.toString().ifBlank { "▦" }
+                previewEmoji.setTextColor(iconColor)
+                previewEmoji.setTextSize(TypedValue.COMPLEX_UNIT_PX, glyphPx * 0.8f)
+            }
+            idImage -> {
+                val bmp = pendingImage ?: savedImage
+                if (bmp != null) previewIcon.setImageBitmap(bmp) else showSymbol()
+            }
+            idApp -> {
+                if (selectedPkg.isEmpty()) {
+                    showSymbol()
+                } else {
+                    try {
+                        previewIcon.setImageDrawable(packageManager.getApplicationIcon(selectedPkg))
+                    } catch (e: Exception) {
+                        showSymbol()
+                    }
+                }
+            }
+            else -> showSymbol()
+        }
+        previewName.text = nameField.text.toString()
+        previewName.setTextColor(iconColor)
+    }
+
+    // ---------- Componenti ----------
+
     /** Griglia con le icone del set; quella scelta è evidenziata. */
-    private fun buildSymbolStrip(root: View): View {
+    private fun buildSymbolGrid(root: View): View {
         val ta = obtainStyledAttributes(intArrayOf(android.R.attr.textColorPrimary))
         val tint = ta.getColor(0, 0xFF000000.toInt())
         ta.recycle()
@@ -172,19 +318,117 @@ class WidgetConfigActivity : Activity() {
                 setOnClickListener {
                     symbol = key
                     iconGroup.check(idSet)
-                    refreshSymbolStrip()
+                    refreshSymbolGrid()
+                    refreshPreview()
                 }
             }
             symbolViews[key] = iv
             grid.addView(iv)
         }
-        refreshSymbolStrip()
+        refreshSymbolGrid()
         return grid
     }
 
-    private fun refreshSymbolStrip() {
+    private fun refreshSymbolGrid() {
         symbolViews.forEach { (key, iv) -> iv.alpha = if (key == symbol) 1f else 0.3f }
     }
+
+    /** Riga scorrevole di campioni di colore; [withAuto] aggiunge «Auto» (valore 0). */
+    private fun swatchRow(
+        root: View,
+        colors: List<Int>,
+        withAuto: Boolean,
+        current: () -> Int,
+        onPick: (Int) -> Unit,
+    ): View {
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, root.dp(4), 0, root.dp(4))
+        }
+        val items = mutableListOf<Pair<Int, View>>()
+        fun refresh() {
+            items.forEach { (c, v) ->
+                val selected = c == current()
+                v.alpha = if (selected) 1f else 0.45f
+                v.scaleX = if (selected) 1.15f else 1f
+                v.scaleY = v.scaleX
+            }
+        }
+        fun add(value: Int, v: View) {
+            v.setOnClickListener {
+                onPick(value)
+                refresh()
+            }
+            items += value to v
+            row.addView(v)
+        }
+        val size = root.dp(40)
+        val margin = root.dp(4)
+        if (withAuto) {
+            add(
+                0,
+                TextView(this).apply {
+                    text = "Auto"
+                    textSize = 12f
+                    gravity = Gravity.CENTER
+                    background = GradientDrawable().apply {
+                        shape = GradientDrawable.OVAL
+                        setStroke(root.dp(1), 0x99888888.toInt())
+                    }
+                    layoutParams = LinearLayout.LayoutParams(size, size).apply { setMargins(margin, 0, margin, 0) }
+                },
+            )
+        }
+        colors.forEach { col ->
+            add(
+                col,
+                View(this).apply {
+                    background = GradientDrawable().apply {
+                        shape = GradientDrawable.OVAL
+                        setColor(col)
+                        setStroke(root.dp(1), 0x99888888.toInt())
+                    }
+                    layoutParams = LinearLayout.LayoutParams(size, size).apply { setMargins(margin, 0, margin, 0) }
+                },
+            )
+        }
+        refresh()
+        return HorizontalScrollView(this).apply { addView(row) }
+    }
+
+    /** Cursore con etichetta che mostra il valore corrente. */
+    private fun seekRow(
+        root: View,
+        label: String,
+        min: Int,
+        max: Int,
+        value: Int,
+        unit: String,
+        onChange: (Int) -> Unit,
+    ): View {
+        val text = TextView(this).apply { this.text = "$label: $value$unit" }
+        val bar = SeekBar(this).apply {
+            this.max = max - min
+            progress = value - min
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(s: SeekBar?, progress: Int, fromUser: Boolean) {
+                    val v = progress + min
+                    text.text = "$label: $v$unit"
+                    onChange(v)
+                }
+                override fun onStartTrackingTouch(s: SeekBar?) {}
+                override fun onStopTrackingTouch(s: SeekBar?) {}
+            })
+        }
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, root.dp(4), 0, root.dp(4))
+            addView(text)
+            addView(bar)
+        }
+    }
+
+    // ---------- Ciclo di vita ----------
 
     override fun onResume() {
         super.onResume()
@@ -210,6 +454,7 @@ class WidgetConfigActivity : Activity() {
         pendingImage = Bitmap.createScaledBitmap(square, 192, 192, true)
         imageStatus.text = "Nuova immagine selezionata"
         iconGroup.check(idImage)
+        refreshPreview()
     }
 
     private fun save() {
@@ -229,10 +474,22 @@ class WidgetConfigActivity : Activity() {
         }
         // Senza immagine disponibile si torna al set di icone
         val finalMode = if (mode == Store.ICON_IMAGE && !Store.imageFile(this, widgetId).exists()) Store.ICON_SET else mode
-        val tone = if (toneGroup.checkedRadioButtonId == idBlack) Store.TONE_BLACK else Store.TONE_WHITE
         Store.saveConfig(
             this, widgetId,
-            Store.WidgetCfg(pkg, nameField.text.toString().trim(), finalMode, emojiField.text.toString().trim(), symbol, tone),
+            Store.WidgetCfg(
+                pkg = pkg,
+                name = nameField.text.toString().trim(),
+                iconMode = finalMode,
+                emoji = emojiField.text.toString().trim(),
+                symbol = symbol,
+                iconColor = iconColor,
+                iconSize = iconSize,
+                bgShape = bgShape,
+                bgColor = bgColor,
+                bgAlpha = bgAlpha,
+                menuColor = menuColor,
+                menuAlpha = menuAlpha,
+            ),
         )
         setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId))
         CoroutineScope(Dispatchers.Main).launch {

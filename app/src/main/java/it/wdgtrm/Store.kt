@@ -11,8 +11,6 @@ object Store {
     const val ICON_IMAGE = 2
     const val ICON_SET = 3
 
-    const val TONE_WHITE = 0
-    const val TONE_BLACK = 1
 
     data class WidgetCfg(
         val pkg: String,
@@ -20,7 +18,14 @@ object Store {
         val iconMode: Int,
         val emoji: String,
         val symbol: String = Symbols.DEFAULT,
-        val tone: Int = TONE_WHITE,
+        val iconColor: Int = 0xFFFFFFFF.toInt(),
+        val iconSize: Int = 60,
+        val bgShape: String = BgShapes.NONE,
+        val bgColor: Int = 0xFF000000.toInt(),
+        val bgAlpha: Int = 70,
+        /** 0 = colore del tema (chiaro/scuro). */
+        val menuColor: Int = 0,
+        val menuAlpha: Int = 100,
     )
 
     private fun prefs(c: Context) = c.getSharedPreferences("wdgt", Context.MODE_PRIVATE)
@@ -37,24 +42,40 @@ object Store {
     fun config(c: Context, widgetId: Int): WidgetCfg? {
         val p = prefs(c)
         val pkg = p.getString("w${widgetId}_pkg", null) ?: return null
+        val id = widgetId
+        // Compatibilità: prima il colore era solo bianco (0) o nero (1)
+        val legacyBlack = p.getInt("w${id}_tone", 0) == 1
         return WidgetCfg(
             pkg = pkg,
-            name = p.getString("w${widgetId}_name", "") ?: "",
-            iconMode = p.getInt("w${widgetId}_mode", ICON_APP),
-            emoji = p.getString("w${widgetId}_emoji", "") ?: "",
-            symbol = p.getString("w${widgetId}_symbol", Symbols.DEFAULT) ?: Symbols.DEFAULT,
-            tone = p.getInt("w${widgetId}_tone", TONE_WHITE),
+            name = p.getString("w${id}_name", "") ?: "",
+            iconMode = p.getInt("w${id}_mode", ICON_APP),
+            emoji = p.getString("w${id}_emoji", "") ?: "",
+            symbol = p.getString("w${id}_symbol", Symbols.DEFAULT) ?: Symbols.DEFAULT,
+            iconColor = p.getInt("w${id}_icolor", if (legacyBlack) 0xFF000000.toInt() else 0xFFFFFFFF.toInt()),
+            iconSize = p.getInt("w${id}_isize", 60),
+            bgShape = p.getString("w${id}_bgshape", BgShapes.NONE) ?: BgShapes.NONE,
+            bgColor = p.getInt("w${id}_bgcolor", 0xFF000000.toInt()),
+            bgAlpha = p.getInt("w${id}_bgalpha", 70),
+            menuColor = p.getInt("w${id}_mcolor", 0),
+            menuAlpha = p.getInt("w${id}_malpha", 100),
         )
     }
 
     fun saveConfig(c: Context, widgetId: Int, cfg: WidgetCfg) {
+        val id = widgetId
         prefs(c).edit()
-            .putString("w${widgetId}_pkg", cfg.pkg)
-            .putString("w${widgetId}_name", cfg.name)
-            .putInt("w${widgetId}_mode", cfg.iconMode)
-            .putString("w${widgetId}_emoji", cfg.emoji)
-            .putString("w${widgetId}_symbol", cfg.symbol)
-            .putInt("w${widgetId}_tone", cfg.tone)
+            .putString("w${id}_pkg", cfg.pkg)
+            .putString("w${id}_name", cfg.name)
+            .putInt("w${id}_mode", cfg.iconMode)
+            .putString("w${id}_emoji", cfg.emoji)
+            .putString("w${id}_symbol", cfg.symbol)
+            .putInt("w${id}_icolor", cfg.iconColor)
+            .putInt("w${id}_isize", cfg.iconSize)
+            .putString("w${id}_bgshape", cfg.bgShape)
+            .putInt("w${id}_bgcolor", cfg.bgColor)
+            .putInt("w${id}_bgalpha", cfg.bgAlpha)
+            .putInt("w${id}_mcolor", cfg.menuColor)
+            .putInt("w${id}_malpha", cfg.menuAlpha)
             .apply()
     }
 
@@ -70,12 +91,11 @@ object Store {
     }
 
     fun delete(c: Context, widgetId: Int) {
-        prefs(c).edit()
-            .remove("w${widgetId}_pkg").remove("w${widgetId}_name")
-            .remove("w${widgetId}_mode").remove("w${widgetId}_emoji")
-            .remove("w${widgetId}_symbol").remove("w${widgetId}_tone")
-            .remove("w${widgetId}_px").remove("w${widgetId}_py")
-            .apply()
+        val keys = listOf(
+            "pkg", "name", "mode", "emoji", "symbol", "tone", "icolor", "isize",
+            "bgshape", "bgcolor", "bgalpha", "mcolor", "malpha", "px", "py",
+        )
+        prefs(c).edit().apply { keys.forEach { remove("w${widgetId}_$it") } }.apply()
         imageFile(c, widgetId).delete()
     }
 
