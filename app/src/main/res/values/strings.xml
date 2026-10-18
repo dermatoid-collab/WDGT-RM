@@ -4,4 +4,5 @@
     <string name="widget_moon">Luna</string>
     <string name="widget_sun">Sole</string>
     <string name="widget_countdown">Countdown Granfondo</string>
+    <string name="widget_shop">Shopping</string>
 </resources>

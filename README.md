@@ -7,6 +7,7 @@ Suite di widget nativi (Kotlin + Jetpack Glance) per Samsung Galaxy / One UI. Co
 | Luna | Fase, illuminazione, giorni alla luna piena |
 | Sole | Alba, tramonto, ore di luce, prossimo evento (Parma) |
 | Countdown | Giorni alla prossima Granfondo |
+| Shopping | Launcher a griglia per Wallet, Satispay, Eurospin, Lidl (icone reali delle app installate) |
 
 ## Personalizzazione
 Modifica `app/src/main/java/it/wdgtrm/Config.kt` (località, nome e data evento).

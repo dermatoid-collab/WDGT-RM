@@ -21,14 +21,14 @@ import it.wdgtrm.MainActivity
 
 /** Contenitore comune: sfondo Material You, angoli arrotondati, tocco → apre l'app. */
 @Composable
-fun WidgetScaffold(content: @Composable ColumnScope.() -> Unit) {
+fun WidgetScaffold(openApp: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
+    val base = GlanceModifier
+        .fillMaxSize()
+        .background(GlanceTheme.colors.widgetBackground)
+        .cornerRadius(24.dp)
+        .padding(12.dp)
     Column(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .background(GlanceTheme.colors.widgetBackground)
-            .cornerRadius(24.dp)
-            .padding(12.dp)
-            .clickable(actionStartActivity<MainActivity>()),
+        modifier = if (openApp) base.clickable(actionStartActivity<MainActivity>()) else base,
         verticalAlignment = Alignment.CenterVertically,
         horizontalAlignment = Alignment.CenterHorizontally,
         content = content,
