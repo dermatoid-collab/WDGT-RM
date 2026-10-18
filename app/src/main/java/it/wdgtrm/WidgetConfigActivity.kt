@@ -18,7 +18,6 @@ import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
 import androidx.glance.appwidget.GlanceAppWidgetManager
-import androidx.glance.appwidget.update
 import it.wdgtrm.widgets.LauncherWidget
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
