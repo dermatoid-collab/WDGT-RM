@@ -39,6 +39,16 @@ object Store {
         Shortcuts.publish(c)
     }
 
+    /** Elenco di app del menu di un singolo widget; null = mai personalizzato (vale quello generale). */
+    fun widgetApps(c: Context, widgetId: Int): List<String>? {
+        val s = prefs(c).getString("w${widgetId}_apps", null) ?: return null
+        return s.split(",").filter { it.isNotBlank() }
+    }
+
+    fun setWidgetApps(c: Context, widgetId: Int, list: List<String>) {
+        prefs(c).edit().putString("w${widgetId}_apps", list.distinct().joinToString(",")).apply()
+    }
+
     fun config(c: Context, widgetId: Int): WidgetCfg? {
         val p = prefs(c)
         val pkg = p.getString("w${widgetId}_pkg", null) ?: return null
@@ -93,7 +103,7 @@ object Store {
     fun delete(c: Context, widgetId: Int) {
         val keys = listOf(
             "pkg", "name", "mode", "emoji", "symbol", "tone", "icolor", "isize",
-            "bgshape", "bgcolor", "bgalpha", "mcolor", "malpha", "px", "py",
+            "bgshape", "bgcolor", "bgalpha", "mcolor", "malpha", "px", "py", "apps",
         )
         prefs(c).edit().apply { keys.forEach { remove("w${widgetId}_$it") } }.apply()
         imageFile(c, widgetId).delete()

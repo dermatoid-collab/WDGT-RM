@@ -25,8 +25,10 @@ import androidx.core.view.doOnLayout
 class MenuActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val apps = Store.apps(this).mapNotNull { pkg -> Apps.label(this, pkg)?.let { pkg to it } }
         val widgetId = intent?.getIntExtra(EXTRA_WIDGET_ID, -1) ?: -1
+        // Ogni widget ha il suo elenco; se mai personalizzato vale quello generale
+        val pkgs = Store.widgetApps(this, widgetId) ?: Store.apps(this)
+        val apps = pkgs.mapNotNull { pkg -> Apps.label(this, pkg)?.let { pkg to it } }
         val cfg = Store.config(this, widgetId)
         val root = FrameLayout(this)
         root.setOnClickListener { finish() }

@@ -47,6 +47,8 @@ class WidgetConfigActivity : Activity() {
     private var autoName = ""
     private var symbol = Symbols.DEFAULT
     private var pendingImage: Bitmap? = null
+    private var menuApps: MutableList<String> = mutableListOf()
+    private lateinit var appEditor: AppListEditor
     private var savedImage: Bitmap? = null
 
     private var iconColor = 0xFFFFFFFF.toInt()
@@ -92,6 +94,8 @@ class WidgetConfigActivity : Activity() {
         }
         val existing = Store.config(this, widgetId)
         selectedPkg = existing?.pkg ?: ""
+        // Elenco proprio del widget; i nuovi (o mai personalizzati) partono da una copia di quello generale
+        menuApps = (Store.widgetApps(this, widgetId) ?: Store.apps(this)).toMutableList()
         existing?.let {
             symbol = it.symbol
             iconColor = it.iconColor
@@ -113,9 +117,12 @@ class WidgetConfigActivity : Activity() {
         root.addLabel("Cosa lancia il widget")
         spinner = Spinner(this)
         root.addView(spinner)
-        emptyHint = TextView(this).apply { text = "L'elenco app è vuoto: il menu resterà vuoto finché non ne aggiungi." }
+        emptyHint = TextView(this).apply { text = "L'elenco è vuoto: aggiungi delle app qui sotto." }
         root.addView(emptyHint)
-        root.addButton("Gestisci elenco app") { startActivity(Intent(this, MainActivity::class.java)) }
+
+        root.addLabel("App del menu di questo widget")
+        appEditor = AppListEditor(this, { menuApps }, { menuApps = it.toMutableList() }) { refreshAppChoices() }
+        root.addView(appEditor.view)
 
         root.addLabel("Nome")
         nameField = EditText(this).apply {
@@ -433,7 +440,12 @@ class WidgetConfigActivity : Activity() {
     override fun onResume() {
         super.onResume()
         if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return
-        pkgs = listOf("") + Store.apps(this)
+        refreshAppChoices()
+    }
+
+    /** Aggiorna la scelta «cosa lancia» quando cambia l'elenco di app del widget. */
+    private fun refreshAppChoices() {
+        pkgs = listOf("") + menuApps
         val labels = pkgs.map {
             if (it.isEmpty()) "Menu: scegli ogni volta" else Apps.label(this, it) ?: "$it (non installata)"
         }
@@ -474,6 +486,7 @@ class WidgetConfigActivity : Activity() {
         }
         // Senza immagine disponibile si torna al set di icone
         val finalMode = if (mode == Store.ICON_IMAGE && !Store.imageFile(this, widgetId).exists()) Store.ICON_SET else mode
+        Store.setWidgetApps(this, widgetId, menuApps)
         Store.saveConfig(
             this, widgetId,
             Store.WidgetCfg(
