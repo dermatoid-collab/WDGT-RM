@@ -112,8 +112,11 @@ class MenuPanel(
         if (items.isEmpty()) return
         items.forEach { (it.parent as? ViewGroup)?.removeView(it) }
         card.removeAllViews()
-        var rows = items.chunked(columnsPerRow())
-        if (above) rows = rows.asReversed()
+        val perRow = columnsPerRow()
+        var rows = items.chunked(perRow)
+        // Solo in colonna singola, sopra il widget, la prima app sta in basso (vicino al pollice);
+        // con più colonne si legge sempre dall'alto in basso e da sinistra a destra
+        if (above && perRow == 1) rows = rows.asReversed()
         rows.forEach { row ->
             card.addView(LinearLayout(activity).apply {
                 orientation = LinearLayout.HORIZONTAL
