@@ -60,6 +60,7 @@ class WidgetConfigActivity : Activity() {
     private var bgAlpha = 70
     private var menuColor = 0
     private var menuAlpha = 100
+    private var menuColumns = 1
 
     private lateinit var spinner: Spinner
     private lateinit var emptyHint: TextView
@@ -107,6 +108,7 @@ class WidgetConfigActivity : Activity() {
             bgAlpha = it.bgAlpha
             menuColor = it.menuColor
             menuAlpha = it.menuAlpha
+            menuColumns = it.menuColumns
         }
         val imgFile = Store.imageFile(this, widgetId)
         if (imgFile.exists()) savedImage = BitmapFactory.decodeFile(imgFile.path)
@@ -193,9 +195,24 @@ class WidgetConfigActivity : Activity() {
         root.addView(swatchRow(root, palette, true, { menuColor }) { menuColor = it })
         root.addView(seekRow(root, "Opacità menu", 10, 100, menuAlpha, "%") { menuAlpha = it })
 
+        root.addLabel("Disposizione del menu")
+        root.addView(Spinner(this).apply {
+            adapter = ArrayAdapter(
+                this@WidgetConfigActivity, android.R.layout.simple_spinner_dropdown_item,
+                listOf("1 colonna", "2 colonne", "3 colonne", "4 colonne", "Riga orizzontale"),
+            )
+            setSelection(if (menuColumns == 0) 4 else (menuColumns - 1).coerceIn(0, 3))
+            onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
+                    menuColumns = if (pos == 4) 0 else pos + 1
+                }
+                override fun onNothingSelected(p: AdapterView<*>?) {}
+            }
+        })
+
         root.addLabel("Posizione del menu")
         positionCheck = CheckBox(this).apply {
-            text = "Dopo il salvataggio, tocca il widget in Home per posizionare il menu sopra di esso"
+            text = "Dopo il salvataggio, mostra l'anteprima per posizionare il menu sopra il widget"
             // Utile al primo uso e se il widget è stato spostato
             isChecked = Store.position(this@WidgetConfigActivity, widgetId) == null
         }
@@ -535,6 +552,7 @@ class WidgetConfigActivity : Activity() {
                 bgAlpha = bgAlpha,
                 menuColor = menuColor,
                 menuAlpha = menuAlpha,
+                menuColumns = menuColumns,
             ),
         )
         setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId))
@@ -546,7 +564,7 @@ class WidgetConfigActivity : Activity() {
                 // il widget viene comunque aggiornato dal sistema dopo l'aggiunta
             }
             if (positionCheck.isChecked && pkg.isEmpty()) {
-                // Schermata trasparente sopra la Home: si tocca il centro del widget
+                // Schermata trasparente sopra la Home, con anteprima del menu
                 startActivity(
                     Intent(this@WidgetConfigActivity, PositionActivity::class.java)
                         .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId),

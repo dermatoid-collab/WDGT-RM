@@ -74,6 +74,7 @@ object Backup {
             .put("bgAlpha", cfg.bgAlpha)
             .put("menuColor", cfg.menuColor)
             .put("menuAlpha", cfg.menuAlpha)
+            .put("menuColumns", cfg.menuColumns)
             .put("apps", JSONArray(Store.widgetApps(c, id) ?: Store.apps(c)))
         val img = Store.imageFile(c, id)
         if (img.exists()) o.put("image", Base64.encodeToString(img.readBytes(), Base64.NO_WRAP))
@@ -95,6 +96,7 @@ object Backup {
             bgAlpha = o.optInt("bgAlpha", d.bgAlpha),
             menuColor = o.optInt("menuColor", d.menuColor),
             menuAlpha = o.optInt("menuAlpha", d.menuAlpha),
+            menuColumns = o.optInt("menuColumns", d.menuColumns),
         )
         val apps = o.optJSONArray("apps")?.let { a -> (0 until a.length()).map { a.getString(it) } } ?: emptyList()
         val image = o.optString("image", "").takeIf { it.isNotEmpty() }?.let { Base64.decode(it, Base64.NO_WRAP) }

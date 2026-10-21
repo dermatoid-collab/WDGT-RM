@@ -26,6 +26,8 @@ object Store {
         /** 0 = colore del tema (chiaro/scuro). */
         val menuColor: Int = 0,
         val menuAlpha: Int = 100,
+        /** 1-4 colonne; 0 = riga orizzontale. */
+        val menuColumns: Int = 1,
     )
 
     private fun prefs(c: Context) = c.getSharedPreferences("wdgt", Context.MODE_PRIVATE)
@@ -75,6 +77,7 @@ object Store {
             bgAlpha = p.getInt("w${id}_bgalpha", 70),
             menuColor = p.getInt("w${id}_mcolor", 0),
             menuAlpha = p.getInt("w${id}_malpha", 100),
+            menuColumns = p.getInt("w${id}_mcols", 1),
         )
     }
 
@@ -93,6 +96,7 @@ object Store {
             .putInt("w${id}_bgalpha", cfg.bgAlpha)
             .putInt("w${id}_mcolor", cfg.menuColor)
             .putInt("w${id}_malpha", cfg.menuAlpha)
+            .putInt("w${id}_mcols", cfg.menuColumns)
             .apply()
     }
 
@@ -110,7 +114,7 @@ object Store {
     fun delete(c: Context, widgetId: Int) {
         val keys = listOf(
             "pkg", "name", "mode", "emoji", "symbol", "tone", "icolor", "isize",
-            "bgshape", "bgcolor", "bgalpha", "mcolor", "malpha", "px", "py", "apps",
+            "bgshape", "bgcolor", "bgalpha", "mcolor", "malpha", "mcols", "px", "py", "apps",
         )
         prefs(c).edit().apply { keys.forEach { remove("w${widgetId}_$it") } }.apply()
         imageFile(c, widgetId).delete()
