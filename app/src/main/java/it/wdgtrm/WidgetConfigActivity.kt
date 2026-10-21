@@ -1,6 +1,7 @@
 package it.wdgtrm
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.appwidget.AppWidgetManager
 import android.content.Intent
 import android.graphics.Bitmap
@@ -26,6 +27,7 @@ import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.Spinner
 import android.widget.TextView
+import android.widget.Toast
 import androidx.core.graphics.ColorUtils
 import androidx.core.widget.doAfterTextChanged
 import androidx.glance.appwidget.GlanceAppWidgetManager
@@ -113,6 +115,7 @@ class WidgetConfigActivity : Activity() {
         root.padForSystemBars(root.dp(20))
         root.addTitle("Impostazioni widget")
         root.addView(buildPreview(root))
+        root.addButton("Carica da backup…") { showProfiles() }
 
         root.addLabel("Cosa lancia il widget")
         spinner = Spinner(this)
@@ -221,6 +224,27 @@ class WidgetConfigActivity : Activity() {
         refreshPreview()
     }
 
+    /** Applica a questo widget le impostazioni di un'istanza dell'ultimo backup importato. */
+    private fun showProfiles() {
+        val profiles = Backup.profiles(this)
+        if (profiles.isEmpty()) {
+            Toast.makeText(this, "Nessun backup importato: usa «Importa backup» nell'app WDGT-RM", Toast.LENGTH_LONG).show()
+            return
+        }
+        val labels = profiles.map { p ->
+            val what = if (p.cfg.pkg.isEmpty()) "menu" else Apps.label(this, p.cfg.pkg) ?: p.cfg.pkg
+            "${p.cfg.name.ifBlank { "(senza nome)" }} · $what"
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Carica da backup")
+            .setItems(labels.toTypedArray()) { _, i ->
+                Backup.applyProfile(this, widgetId, profiles[i])
+                recreate() // ricarica la schermata con i valori appena applicati
+            }
+            .setNegativeButton("Annulla", null)
+            .show()
+    }
+
     // ---------- Anteprima ----------
 
     /** Riquadro grigio (per far vedere la trasparenza) con il widget com'è adesso. */
@@ -303,7 +327,7 @@ class WidgetConfigActivity : Activity() {
 
     // ---------- Componenti ----------
 
-    /** Griglia con le icone del set; quella scelta è evidenziata. */
+    /** Icone del set raggruppate per tema, ognuno con la sua griglia; quella scelta è evidenziata. */
     private fun buildSymbolGrid(root: View): View {
         val ta = obtainStyledAttributes(intArrayOf(android.R.attr.textColorPrimary))
         val tint = ta.getColor(0, 0xFF000000.toInt())
@@ -311,29 +335,38 @@ class WidgetConfigActivity : Activity() {
         val columns = 6
         val cell = (resources.displayMetrics.widthPixels - 2 * root.dp(20)) / columns
         val pad = cell / 5
-        val grid = GridLayout(this).apply { columnCount = columns }
-        Symbols.all.forEach { (key, res) ->
-            val iv = ImageView(this).apply {
-                layoutParams = GridLayout.LayoutParams().apply {
-                    width = cell
-                    height = cell
+        val all = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        Symbols.groups.forEach { (title, icons) ->
+            all.addView(TextView(this).apply {
+                text = title
+                textSize = 12f
+                setPadding(0, root.dp(12), 0, root.dp(2))
+            })
+            val grid = GridLayout(this).apply { columnCount = columns }
+            icons.forEach { (key, res) ->
+                val iv = ImageView(this).apply {
+                    layoutParams = GridLayout.LayoutParams().apply {
+                        width = cell
+                        height = cell
+                    }
+                    setPadding(pad, pad, pad, pad)
+                    setImageResource(res)
+                    setColorFilter(tint)
+                    contentDescription = key
+                    setOnClickListener {
+                        symbol = key
+                        iconGroup.check(idSet)
+                        refreshSymbolGrid()
+                        refreshPreview()
+                    }
                 }
-                setPadding(pad, pad, pad, pad)
-                setImageResource(res)
-                setColorFilter(tint)
-                contentDescription = key
-                setOnClickListener {
-                    symbol = key
-                    iconGroup.check(idSet)
-                    refreshSymbolGrid()
-                    refreshPreview()
-                }
+                symbolViews[key] = iv
+                grid.addView(iv)
             }
-            symbolViews[key] = iv
-            grid.addView(iv)
+            all.addView(grid)
         }
         refreshSymbolGrid()
-        return grid
+        return all
     }
 
     private fun refreshSymbolGrid() {

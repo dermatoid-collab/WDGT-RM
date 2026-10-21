@@ -39,6 +39,13 @@ object Store {
         Shortcuts.publish(c)
     }
 
+    /** Istanze dell'ultimo backup importato (JSON), da applicare ai nuovi widget. */
+    fun profilesJson(c: Context): String = prefs(c).getString("profiles", "[]") ?: "[]"
+
+    fun setProfilesJson(c: Context, json: String) {
+        prefs(c).edit().putString("profiles", json).apply()
+    }
+
     /** Elenco di app del menu di un singolo widget; null = mai personalizzato (vale quello generale). */
     fun widgetApps(c: Context, widgetId: Int): List<String>? {
         val s = prefs(c).getString("w${widgetId}_apps", null) ?: return null

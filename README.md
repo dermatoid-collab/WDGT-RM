@@ -11,13 +11,16 @@ Suite di widget nativi (Kotlin + Jetpack Glance) per Samsung Galaxy / One UI. Co
 
 ## Launcher
 1. Apri l'app **WDGT-RM**: definisci l'elenco generale delle app e riordinalo (▲ ▼ ✕). I nuovi widget partono con una copia di questo elenco.
-2. Aggiungi il widget *Launcher* alla Home (sfondo trasparente, stile minimal bianco/nero): si aprono le impostazioni, dove scegli l'**elenco di app del menu di quel widget** (indipendente dagli altri), nome, icona (set di 51 simboli minimal (shopping, tecnologia, sport, casa, svago…), icona dell'app, emoji o immagine), colore e dimensione dell'icona, sfondo del widget (forma One UI «squircle», cerchio, quadrato arrotondato, colore e opacità a scelta), colore e opacità del menu, e se il widget apre il **menu** o una **app fissa**. Un'anteprima in tempo reale mostra il risultato.
+2. Aggiungi il widget *Launcher* alla Home (sfondo trasparente, stile minimal bianco/nero): si aprono le impostazioni, dove scegli l'**elenco di app del menu di quel widget** (indipendente dagli altri), nome, icona (set di oltre 150 simboli minimal raggruppati per tema (shopping, tecnologia, sport, cielo e scienza, cibo, casa e lavoro, musica, viaggi…), icona dell'app, emoji o immagine), colore e dimensione dell'icona, sfondo del widget (forma One UI «squircle», cerchio, quadrato arrotondato, colore e opacità a scelta), colore e opacità del menu, e se il widget apre il **menu** o una **app fissa**. Un'anteprima in tempo reale mostra il risultato.
 3. Un tocco sul widget apre il menu: colonna di sole icone su sfondo opaco, la più stretta possibile, sopra il widget (sotto se non c'è spazio). Tocca un'icona per lanciare l'app, tocca fuori per chiudere.
 4. One UI non comunica alle app dove si trova il widget: per aprire il menu proprio sopra di esso, dopo il salvataggio delle impostazioni tocca il centro del widget quando compare la schermata scura. Se sposti il widget, ripeti da *Impostazioni* (opzione «Posizione del menu»).
 5. Per modificarlo in seguito: tieni premuto sul widget → *Impostazioni* (il tocco prolungato è gestito dalla schermata Home di Android e non può aprire il menu).
 
 ## Scorciatoie
 Le prime app dell'elenco (fino al limite di Android, di solito 4-5) compaiono come scorciatoie tenendo premuta l'icona dell'app WDGT-RM.
+
+## Backup
+Nell'app WDGT-RM: *Esporta backup…* salva su file (Drive, Download…) l'elenco generale e tutte le istanze del widget. Dopo una reinstallazione: *Importa backup…*, poi aggiungi i widget e in ognuno usa *Carica da backup…* per applicare un'istanza salvata.
 
 ## Personalizzazione
 `app/src/main/java/it/wdgtrm/Config.kt` (località, nome e data evento per Sole e Countdown).
